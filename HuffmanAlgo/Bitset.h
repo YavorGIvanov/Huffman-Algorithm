@@ -33,12 +33,10 @@ public:
 	  blockSize = ceil(bitSize / bitsBTf());
 	  bitset = new blockType[blockSize];
 	  in.read(reinterpret_cast<char *>(bitset), sizeof(blockType)*blockSize);
-	  printf("%d ", bitset[5]);
   }
   void write(std::ostream &out) const {
 	  out.write(reinterpret_cast<const char*>(&bitSize), sizeof(bitSize));
 	  out.write(reinterpret_cast<const char*>(bitset), (ceil(bitSize / bitsBTf()) * sizeof(blockType)));
-	  printf("%d %d %d %d", (ceil(bitSize / bitsBTf()) * sizeof(blockType)), (*this)[0] , (*this)[1], (*this)[2]);
   }
 
   void read(std::istream &in) {
