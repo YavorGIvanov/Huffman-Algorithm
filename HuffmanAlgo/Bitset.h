@@ -4,9 +4,13 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <vector>
 #include <type_traits>
+#include <memory>
+#include <fstream>
 
-template <typename blockType> class Bitset {
+template <typename blockType = unsigned long long> 
+class Bitset {
   static_assert(std::is_pod<blockType>::value,
                 "The specified type is not POD type");
   static_assert(!std::is_signed<blockType>::value,
@@ -21,24 +25,33 @@ public:
 
   explicit Bitset(sizeType mCap)
       : blockSize(ceil(mCap / bitsBTf())), bitSize(0) {
-    bitset = new blockType[blockSize];
-    memset(bitset, 0, blockSize * sizeof(blockType));
+	  bitset = new blockType[blockSize];
+	  memset(bitset, 0, sizeof(blockType)*blockSize);
+  }
+  explicit Bitset(std::istream &in) {
+	  in.read(reinterpret_cast<char *>(&bitSize), sizeof(bitSize));
+	  blockSize = ceil(bitSize / bitsBTf());
+	  bitset = new blockType[blockSize];
+	  in.read(reinterpret_cast<char *>(bitset), sizeof(blockType)*blockSize);
+	  printf("%d ", bitset[5]);
+  }
+  void write(std::ostream &out) const {
+	  out.write(reinterpret_cast<const char*>(&bitSize), sizeof(bitSize));
+	  out.write(reinterpret_cast<const char*>(bitset), (ceil(bitSize / bitsBTf()) * sizeof(blockType)));
+	  printf("%d %d %d %d", (ceil(bitSize / bitsBTf()) * sizeof(blockType)), (*this)[0] , (*this)[1], (*this)[2]);
   }
 
-  explicit Bitset(FILE *in) {
-    if (!in) {
-      return;
-    }
-    fread(&bitSize, sizeof(bitSize), 1, in);
-    blockSize = ceil(bitSize / bitsBTf());
-    bitset = new blockType[blockSize];
-    fread(bitset, sizeof(blockType), blockSize, in);
+  void read(std::istream &in) {
+	  in.read(reinterpret_cast<)
   }
 
+  ~Bitset() {
+	  delete[] bitset;
+  }
   Bitset(const Bitset<blockType> &other)
       : blockSize(other.blockSize), bitSize(other.bitSize) {
-    bitset = new blockType[other.blockSize];
-    memcpy(bitset, other.bitset, blockSize * sizeof(blockType));
+	  bitset = new blockType[blockSize];
+	  memcpy(bitset, other.bitset, blockSize * sizeof(blockType));
   }
   Bitset &operator=(Bitset<blockType> other) {
     blockType *temp = other.bitset;
@@ -47,9 +60,6 @@ public:
     blockSize = other.blockSize;
     bitSize = other.bitSize;
     return *this;
-  }
-  ~Bitset() { 
-	  delete[] bitset; 
   }
 
   void reserve(sizeType newBitCap) {
@@ -139,20 +149,6 @@ public:
     --bitSize;
   }
 
-  void writeToFile(FILE *out) const {
-    if (!out) {
-      return;
-    }
-    fwrite(&bitSize, sizeof(bitSize), 1, out);
-    fwrite(bitset, (ceil(bitSize / bitsBTf()) * sizeof(blockType)), 1, out);
-  }
-
-  void writeToFileNoSz(FILE *out) const {
-    if (!out) {
-      return;
-    }
-    fwrite(bitset, sizeof(blockType), blockSize, out);
-  }
 
   bool empty() const { 
 	  return bitSize == 0; 
