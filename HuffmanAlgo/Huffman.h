@@ -1,16 +1,4 @@
-#ifndef HUFFMAN_H
-#define HUFFMAN_H
-#define _CRT_SECURE_NO_WARNINGS
-#include <string>
 #include "HuffTree.h"
-#include <vector>
-#include <string>
-#include <fstream>
-
-using ull = unsigned long long;
-using uchar = unsigned char;
-
-
 
 bool compressFile(const char *inFile, const char *outFile) {
 	/// 0. Open the input file
@@ -26,7 +14,7 @@ bool compressFile(const char *inFile, const char *outFile) {
 	in.close();
 
 	/// 2. Create a Huffman Tree from the given string
-	const CompressHuffTree compressTree(str);
+	const CompressTree compressTree(str);
 
 	/// 3. Open/Create the output binary file
 	std::ofstream out(outFile, std::ios::out | std::ios::binary);
@@ -36,7 +24,7 @@ bool compressFile(const char *inFile, const char *outFile) {
 
 	/// 4. Write the header which can be used decode the file
 	compressTree.write(out);
-	
+
 	/// 5. Compute the result of the string compression in a bitset
 	Bitset<ull> res = compressTree.compress(str);
 
@@ -59,8 +47,8 @@ bool decompressFile(const char *inFile, const char *outFile) {
 	in.read(reinterpret_cast<char *>(&sz), sizeof(sz));
 	std::string chars(sz, ' ');
 	in.read(&chars[0], sz);
-	DecompressHuffTree decompressTree(tree, chars);
-	///2. Read the compressed code in a Bitset
+	const DecompressTree decompressTree(tree, chars);
+	/// 2. Read the compressed code in a Bitset
 	Bitset<ull> code(in);
 	in.close();
 	/// 3. Decompress the bitset code in a char buffer
@@ -70,7 +58,6 @@ bool decompressFile(const char *inFile, const char *outFile) {
 	if (!out) {
 		return false;
 	}
-	out.write(reinterpret_cast<char*>(&str[0]), str.size());
+	out.write(reinterpret_cast<char *>(&str[0]), str.size());
 	out.close();
 }
-#endif

@@ -2,11 +2,9 @@
 #define BITSET_H
 #include <cassert>
 #include <cmath>
-#include <cstdio>
 #include <cstring>
-#include <vector>
 #include <type_traits>
-#include <memory>
+#include <vector>
 #include <fstream>
 
 template <typename blockType = unsigned long long> 
