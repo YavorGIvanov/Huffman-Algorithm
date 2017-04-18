@@ -1,6 +1,5 @@
 #include "Huffman.h"
 
-
 void printhelp() {
 	printf("Usage:\n");
 	printf("compression/decompression mode:\n");

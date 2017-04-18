@@ -10,17 +10,7 @@
 using ull = unsigned long long;
 using uchar = unsigned char;
 
-void buildTable(const HuffTree::HuffNode* node, Bitset<ull>& curr, std::vector<Bitset<ull>*>& codeTable) {
-	if (node->leaf) {
-		codeTable[node->c] = new Bitset<ull>(curr);
-		return;
-	}
-	curr.push_back(0);
-	buildTable(node->left, curr, codeTable);
-	curr.set(curr.size() - 1);
-	buildTable(node->right, curr, codeTable);
-	curr.pop_back();
-}
+
 
 bool compressFile(const char *inFile, const char *outFile) {
 	/// 0. Open the input file
@@ -48,55 +38,18 @@ bool compressFile(const char *inFile, const char *outFile) {
 	compressTree.write(out);
 	
 	/// 5. Compute the result of the string compression in a bitset
-	HuffTree::HuffNode *root = compressTree.getRoot();
-	std::vector<Bitset<ull>*> codeTable(256);
-	buildTable(root, Bitset<ull>(), codeTable);
-
-	///6. Calculate size in bits of the output compressed code
-	int codeBitSize = 0;
-	const int *charCount = compressTree.getCharCountArr();
-	for (int i = 0; i < 256; i++) {
-		if (codeTable[i]) {
-			codeBitSize += charCount[i] * codeTable[i]->size();
-		}
-	}
-	Bitset<ull> res(codeBitSize);
-
-	for (int i = 0; i < str.size(); i++) {
-		int k = str[i];
-		res += *(codeTable[k]);
-	};
+	Bitset<ull> res = compressTree.compress(str);
 
 	/// 6. Write the bitset to the file
 	res.write(out);
-	/// 7. Delete pointers in codeTable
-	for (int i = 0; i < codeTable.size(); i++) {
-		delete codeTable[i];
-	}
+
 	return true;
-}
-
-
-std::string decompress(HuffTree::HuffNode *root, const Bitset<ull> &code) {
-	std::string res;
-	res.reserve(BUFSIZ);
-	HuffTree::HuffNode *node;
-	int i = 0;
-	while (i < code.size()) {
-		node = root;
-		while (!node->leaf) {
-			node = code[i++] ? node->right : node->left;
-		}
-		res += node->c;
-	}
-	return res;
 }
 
 bool decompressFile(const char *inFile, const char *outFile) {
 	/// 0. Open the decompressed input file
 	std::ifstream in(inFile, std::ios::binary);
 	if (!in) {
-		perror("Error with opening the input compressed file\n");
 		return false;
 	}
 
@@ -111,7 +64,7 @@ bool decompressFile(const char *inFile, const char *outFile) {
 	Bitset<ull> code(in);
 	in.close();
 	/// 3. Decompress the bitset code in a char buffer
-	std::string str = decompress(decompressTree.getRoot(), code);
+	std::string str = decompressTree.decompress(code);
 	/// 4. Write the char buffer to the decompressed file
 	std::ofstream out(outFile, std::ios::binary);
 	if (!out) {

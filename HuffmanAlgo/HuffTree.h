@@ -18,9 +18,6 @@ public:
 		unsigned char c;
 		bool leaf;
 	};
-	HuffNode *getRoot() const {
-		return root;
-	}
 	HuffTree() : root{} {}
     HuffTree(const HuffTree &other) = delete;
 	HuffTree &operator=(const HuffTree &other) = delete;
@@ -31,16 +28,17 @@ protected:
 
 class CompressHuffTree : public HuffTree {
 	typedef unsigned char uchar;
+	typedef unsigned long long ull;
 public:
 	CompressHuffTree(const std::string &str)  {
-		charCounter = new int[alphabetSize]();
+		charCount = new int[alphabetSize]();
 		for (int i = 0; i < str.size(); ++i) {
-			charCounter[str[i]]++;
+			charCount[str[i]]++;
 		}
 		buildHTree(str);
 	}
 	~CompressHuffTree() {
-		delete[] charCounter;
+		delete[] charCount;
 		delHTree(root);
 	}
 	void write(std::ostream &out) const {
@@ -53,11 +51,33 @@ public:
 		out.write(reinterpret_cast<const char *>(&sz), sizeof(sz));
 		out.write(&chars[0], sz);
 	}
-	const int *getCharCountArr() const {
-		return charCounter;
+	std::vector<Bitset<ull>*> buildTable() const {
+		std::vector<Bitset<ull>*> codeTable(256);
+		buildTable(root, Bitset<ull>(), codeTable);
+		return codeTable;
+	}
+
+	Bitset<ull> compress(const std::string &str) const{
+		std::vector<Bitset<ull>*> codeTable = buildTable();
+		int codeBitSize = 0;
+		for (int i = 0; i < 256; i++) {
+			if (codeTable[i]) {
+				codeBitSize += charCount[i] * codeTable[i]->size();
+			}
+		}
+		Bitset<ull> res(codeBitSize);
+
+		for (int i = 0; i < str.size(); i++) {
+			int k = str[i];
+			res += *(codeTable[k]);
+		};
+		for (int i = 0; i < codeTable.size(); i++) {
+			delete codeTable[i];
+		}
+		return res;
 	}
 private:
-	int *charCounter;
+	int *charCount;
 	int uniqueChars;
 	static const int alphabetSize = 256;
 	struct Comp {
@@ -68,8 +88,8 @@ private:
 	void buildHTree(const std::string &str) {
 		Heap <HuffNode*, alphabetSize, Comp> maxPQ;
 		for (int i = 0; i < alphabetSize; ++i) {
-			if (charCounter[i] > 0) {
-				maxPQ.push(new HuffNode(nullptr, nullptr, charCounter[i], static_cast<char>(i), true));
+			if (charCount[i] > 0) {
+				maxPQ.push(new HuffNode(nullptr, nullptr, charCount[i], static_cast<char>(i), true));
 				uniqueChars++;
 			}
 		}
@@ -95,7 +115,17 @@ private:
 		buildBitsetFromTree(node->left, tree, chars);
 		buildBitsetFromTree(node->right, tree, chars);
 	}
-
+	void buildTable(const HuffTree::HuffNode* node, Bitset<ull>& curr, std::vector<Bitset<ull>*>& codeTable) const{
+		if (node->leaf) {
+			codeTable[node->c] = new Bitset<ull>(curr);
+			return;
+		}
+		curr.push_back(0);
+		buildTable(node->left, curr, codeTable);
+		curr.set(curr.size() - 1);
+		buildTable(node->right, curr, codeTable);
+		curr.pop_back();
+	}
 	void delHTree(HuffNode *node) {
 		if (!node->leaf) {
 			delHTree(node->left);
@@ -107,10 +137,14 @@ private:
 
 class DecompressHuffTree : public HuffTree {
 	typedef unsigned char uchar;
+	typedef unsigned long long ull;
 public:
 	DecompressHuffTree(const Bitset<uchar> &tree, const std::string &chars) {
 		int idx = 0, charIdx = 0;
 		root = buildTreeFromBitset(tree, chars, idx, charIdx);
+	}
+	std::string decompress(const Bitset<ull> &code) const {
+		return decompress(root, code);
 	}
 private:
 	HuffNode* buildTreeFromBitset(const Bitset<uchar> &tree, const std::string &chars, int &idx, int &charIdx) {
@@ -124,5 +158,20 @@ private:
 		}
 		return nullptr;
 	}
+	std::string decompress(HuffTree::HuffNode *root, const Bitset<ull> &code) const{
+		std::string res;
+		res.reserve(BUFSIZ);
+		HuffTree::HuffNode *node;
+		int i = 0;
+		while (i < code.size()) {
+			node = root;
+			while (!node->leaf) {
+				node = code[i++] ? node->right : node->left;
+			}
+			res += node->c;
+		}
+		return res;
+	}
+
 };
 #endif
